@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -68,7 +69,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Surface(
-                modifier = Modifier.FillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
                 MainScreen(
@@ -98,24 +99,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun executeSshCommand(command: String) {
-        // Mapping voice commands to actual Pineapple shell commands
         val shellCommand = when {
             command.contains("scan", ignoreCase = true) -> "airodump-ng wlan0mon"
             command.contains("status", ignoreCase = true) -> "ifconfig"
             command.contains("reboot", ignoreCase = true) -> "reboot"
-            else -> command // fallback to run the raw text command
+            else -> command
         }
 
-        kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val jsch = JSch()
                 val session = jsch.getSession("root", "172.16.42.1", 22)
-                session.setPassword("root") // Default WiFi Pineapple password
+                session.setPassword("root")
                 session.setConfig("StrictHostKeyChecking", "no")
                 session.connect(5000)
 
                 val channel = session.openChannel("exec") as ChannelExec
-                channel.command = shellCommand
+                channel.setCommand(shellCommand) // Fixed package-private access error
                 channel.connect()
 
                 val reader = channel.inputStream.bufferedReader()
